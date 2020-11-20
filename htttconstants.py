@@ -54,3 +54,6 @@ class HTTT:
     #X and O formatting offsets
     X_OFFSET = 10
     O_OFFSET = 7
+
+    #socket variables
+    HEADERSIZE = 10
