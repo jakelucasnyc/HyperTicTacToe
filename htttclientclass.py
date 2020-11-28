@@ -53,6 +53,7 @@ class HTTTClient:
         self.row_cord = None #variable for use in draw_shapes()
         self.col_cord = None #variable for use in draw_shapes()
         self.nextb_cords = [None, None] #variable for use in draw_shapes()
+        self.b_cords = [None, None] #variable for use in draw_shapes()
 
         #input variables
         self.left_clicked = False
@@ -72,7 +73,8 @@ class HTTTClient:
             'right_clicked': self.right_clicked, 
             'game_over': self.game_over,
             'winning_side': self.winning_side,
-            'nextb_cords': self.nextb_cords
+            'nextb_cords': self.nextb_cords,
+            'b_cords': self.b_cords
 
             } #data to be sent from client to server
 
@@ -103,6 +105,12 @@ class HTTTClient:
         if self.start_button.is_clicked(self.mouse_pos):
             self.game_started = True
 
+    def game_screen_aesthetics(self):
+        self.screen.fill(HTTT.WHITE)
+        self.draw_grid(HTTT.LBOX_CORDS, HTTT.GLINE_WIDTH)
+        self.draw_grid(HTTT.BBOX_CORDS, HTTT.BGLINE_WIDTH)
+        
+
     def draw_grid(self, box_cords, linewidth):
         """
         Method drawing the grid of the HTTT Board
@@ -117,10 +125,25 @@ class HTTTClient:
                     self.end_pos = [HTTT.END_CORD, cord]
                 pygame.draw.line(self.screen, HTTT.BLACK, self.start_pos, self.end_pos, linewidth)
 
+
+    def draw_gridlines_per_gameloop(self):
+        self.draw_grid(HTTT.LBOX_CORDS, HTTT.GLINE_WIDTH)
+        self.draw_grid(HTTT.BBOX_CORDS, HTTT.BGLINE_WIDTH)
+
+    def draw_rects(self):
+
+        if self.b_cords:
+            # changing the previous red box back to white
+            pygame.draw.rect(self.screen, HTTT.WHITE, [self.b_cords[0], self.b_cords[1], HTTT.BBOX_SIZE, HTTT.BBOX_SIZE])
+        if self.nextb_cords:
+            # outlining the box that needs to be played in
+            pygame.draw.rect(self.screen, HTTT.NBOX_COLOR, [self.nextb_cords[0], self.nextb_cords[1], HTTT.BBOX_SIZE, HTTT.BBOX_SIZE])
+
     def draw_shapes(self, grid_record, size, linewidth):
         """
         Method drawing each shape and corresponding drawings (rects to cover up other shapes)
         """
+
         for row in range(len(grid_record[:,1])):
             self.row_cord = (row*size+HTTT.START_CORD)
 
@@ -146,13 +169,6 @@ class HTTTClient:
 
                 else:
                     pass
-
-
-
-    def game_screen_aesthetics(self):
-        self.screen.fill(HTTT.WHITE)
-        self.draw_grid(HTTT.LBOX_CORDS, HTTT.GLINE_WIDTH)
-        self.draw_grid(HTTT.BBOX_CORDS, HTTT.BGLINE_WIDTH)
 
 
     def if_input(self):
@@ -194,18 +210,19 @@ class HTTTClient:
             self.if_input()
             pygame.display.update()
             while self.game_started and not self.quit_to_title:
-                # self.game_init()
-                self.game_screen_aesthetics()
+
+                self.game_init()
                 # time.sleep(2)
+                self.game_screen_aesthetics()
                 self.if_input()
                 HTTT._update_dict_from_vars(self, self.game_dict)
                 self.game_dict = self.n.send(self.game_dict)
                 HTTT._update_vars_from_dict(self, self.game_dict)
+                self.draw_rects()
                 self.draw_shapes(self.game_record, HTTT.LBOX_SIZE, HTTT.LXO_LINE_WIDTH)
                 self.draw_shapes(self.big_grid_record, HTTT.BBOX_SIZE, HTTT.BXO_LINE_WIDTH)
-                # self.make_move()
-                # self.draw_shapes(HTTT.LBOX_SIZE, HTTT.LXO_LINE_WIDTH)
-                # self.draw_shapes(HTTT.BBOX_SIZE, HTTT.BXO_LINE_WIDTH)
+                self.draw_gridlines_per_gameloop()
+                
                 pygame.display.update()
 
 

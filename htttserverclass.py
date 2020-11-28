@@ -6,6 +6,22 @@ import numpy as np
 from htttconstants import HTTT
 import random
 import pygame
+import time
+
+# class HTTTClientThread(threading.Thread):
+
+#     def __init__(self):
+#         threading.Thread.__init__(self)
+#         self.HTTTServer = HTTTServer()
+
+
+#     def run(self):
+#         self.HTTTServer.s.listen(HTTTServer.max_num_clients)
+#         print(f'[LISTENING] Server is listening on {HTTTServer.SERVER_IP}')
+#         while True:
+#             self.HTTTServer.conn, self.HTTTServer.addr = self.HTTTServer.s.accept()
+#             print('[CONNECTED TO] ', self.addr)
+#             self.HTTTServer.threaded_client()
 
 class HTTTServer:
 
@@ -55,7 +71,7 @@ class HTTTServer:
         self.nextb_cords = [None, None]
         self.next_cords = [None, None]
         self.cords = [None, None]
-        self.bcords = [None, None]
+        self.b_cords = [None, None]
 
         #private attributes for _separate_pos_neg()
         self._pos = []
@@ -81,10 +97,10 @@ class HTTTServer:
             'right_clicked': self.right_clicked, 
             'game_over': self.game_over,
             'winning_side': self.winning_side,
-            'nextb_cords': self.nextb_cords
+            'nextb_cords': self.nextb_cords,
+            'b_cords': self.b_cords
 
             } #data to be sent from server to client
-
 
 
 
@@ -172,32 +188,27 @@ class HTTTServer:
             else:
                 pass
 
-    def grid_completion_check(self, grid_record, winning_side=None):
+    def grid_completion_check(self, grid_record):
 
-        for ws in [1, 2]:
+        for ws in [1, 2]: #ws means "winning side"
 
             for r_o_c in range(3):
 
 
-                if np.all(grid_record[r_o_c] == ws):
-                    winning_side = ws
-                    return True, winning_side
+                if np.all(grid_record[r_o_c,:] == ws):
+                    return True, ws
 
                 if np.all(grid_record[:,r_o_c] == ws):
-                    winning_side = ws
-                    return True, winning_side
+                    return True, ws
 
             if grid_record[0,0] == ws and grid_record[0,0] == grid_record[1,1] and grid_record[0,0] == grid_record[2,2]:
-                winning_side = ws
-                return True, winning_side
+                return True, ws
             
             if grid_record[0,2] == ws and grid_record[0,2] == grid_record[1,1] and grid_record[0,2] == grid_record[2,0]:
-                winning_side = ws
-                return True, winning_side
+                return True, ws
         
         else:
-            return False, winning_side   
-
+            return False, ws
 
 
     def update_game_data(self, data, shapenum):
@@ -208,7 +219,7 @@ class HTTTServer:
         HTTT._update_vars_from_dict(self, self.game_dict)
 
         self.cords = self.find_box(HTTT.LBOX_CORDS, self.mouse_pos)
-        self.bcords = self.find_box(HTTT.BBOX_CORDS, self.mouse_pos)
+        self.b_cords = self.find_box(HTTT.BBOX_CORDS, self.mouse_pos)
 
         self.loc_elems[0] = int((self.cords[0] - HTTT.START_CORD)/HTTT.LBOX_SIZE) #used for translating pixel size into integers for indexing the recording array x cord (purely for ease of use, but this must be updated after find_box())
         self.loc_elems[1] = int((self.cords[1] - HTTT.START_CORD)/HTTT.LBOX_SIZE) #used for translating pixel size into integers for indexing the recording array y cord (purely for ease of use, but this must be updated after find_box())
@@ -224,12 +235,12 @@ class HTTTServer:
 
         self._compute_move_values()
 
-        self.won_box, self.winning_box_side = self.grid_completion_check(self.game_record)
+        self.won_box, self.winning_box_side = self.grid_completion_check(self.small_grid_record)
 
         if self.won_box:
             self.small_grid_record[self.small_grid_record == 0] = 3
 
-            self.big_grid_record[int((self.bcords[0] - HTTT.START_CORD)/HTTT.BBOX_SIZE), int((self.bcords[1] - HTTT.START_CORD)/HTTT.BBOX_SIZE)] = self.winning_side #changing the big_grid_record if a small box is won
+            self.big_grid_record[int((self.b_cords[0] - HTTT.START_CORD)/HTTT.BBOX_SIZE), int((self.b_cords[1] - HTTT.START_CORD)/HTTT.BBOX_SIZE)] = self.winning_box_side #changing the big_grid_record if a small box is won
 
 
         self.game_over, self.winning_side = self.grid_completion_check(self.big_grid_record)
@@ -242,7 +253,7 @@ class HTTTServer:
 
 
 
-    #CONNECTION AND HANDLING METHODS
+    #CONNECTION AND HANDLING METHODS/CLASSES
 
     def server_bind(self):
         try:
@@ -262,9 +273,8 @@ class HTTTServer:
 
         print('threaded_client started')
         while connected:
-            
+            self.lock.acquire()
             try:
-                self.lock.acquire()
                 self.data = pickle.loads(conn.recv(2048))
 
                 try: 
@@ -294,18 +304,19 @@ class HTTTServer:
                         pass
 
 
+                self.lock.release()
 
                 conn.sendall(pickle.dumps(self.game_dict))
                 print('game data sent')
-                self.lock.release()
 
             except socket.error as e:
                 print(e)
                 print('[ERROR] Error Sending Or Receiving Data')
                 connected = False
 
-            print('[LOST CONNECTION] Lost connection with Side ', side)
-            conn.close()
+            
+        print('[LOST CONNECTION] Lost connection with Side ', side)
+        conn.close()
 
 
 
@@ -318,8 +329,11 @@ class HTTTServer:
 
             self.thread = threading.Thread(target=self.threaded_client, args=[self.conn, threading.activeCount() - 1])
             self.thread.start()
+            self.thread.setName(threading.activeCount()-1)
             self.threads.append(self.thread)
             print(f'\n[ACTIVE CONNECTIONS] {threading.activeCount() - 1}')
+            # for thread in self.threads:
+            #     thread.join()
 
     def main(self):
         self.server_bind()
