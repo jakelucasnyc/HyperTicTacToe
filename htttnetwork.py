@@ -15,12 +15,13 @@ class Network:
             self.clientsocket.connect(self.addr)
             print('post connect')
             return pickle.loads(self.clientsocket.recv(2048))
+            print('post received data from server')
         except socket.error as e:
             print('Error Connecting/Receiving Data for Initial Connect\n', e)
 
     def send(self, data):
         try: 
-            self.clientsocket.send(pickle.dumps(data))
+            self.clientsocket.sendall(pickle.dumps(data))
             return pickle.loads(self.clientsocket.recv(2048))
         except socket.error as e:
             print(str(e))

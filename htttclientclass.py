@@ -5,6 +5,7 @@ import socket
 import pickle
 from htttnetwork import Network
 from htttconstants import HTTT
+import time
 
 class Button:
 
@@ -34,7 +35,6 @@ class Button:
 class HTTTClient:
 
     pygame.init()
-    HTTT = HTTT()
 
     def __init__(self):
 
@@ -42,19 +42,37 @@ class HTTTClient:
         self.exit = False #boolean keeping track of it we exit the application or not
         self.game_started = False #boolean keeping track of if I press the start button or not
         self.quit_to_title = False #boolean keeping track of if we quit to title or not
-        self.mouse_pos = pygame.mouse.get_pos() #value keeping track of the mouse position everytime the mouse is clicked
+        self.game_over = False #boolean keeping track of if the game has ended
+        self.winning_side = None #variable tracking who wins the game
         self.side = None #value keeping track of the player side: X or O
         self.game_moves = 0 #tracking the number of game moves
         self.game_record = np.zeros([9,9]) #array keeping track of the whole game
         self.big_grid_record = np.zeros([3,3]) #array keeping track of the big boxes that are completed
+        self.small_grid_record = np.zeros([3,3]) #array representing the big box that I've clicked into and the values of each of the 9 boxes within it
+        self.nsmall_grid_record = np.zeros([3,3]) #array representing the big box that I should go into next and the values of each of the 9 boxes within it
+        self.row_cord = None #variable for use in draw_shapes()
+        self.col_cord = None #variable for use in draw_shapes()
+        self.nextb_cords = [None, None] #variable for use in draw_shapes()
+
+        #input variables
+        self.left_clicked = False
+        self.right_clicked = False
+        self.mouse_pos = pygame.mouse.get_pos() #value keeping track of the mouse position everytime the mouse is clicked
+
+        #communicated data
         self.game_dict = {
 
             'game_moves': self.game_moves, 
             'game_record': self.game_record, 
             'big_grid_record': self.big_grid_record,
+            'small_grid_record': self.small_grid_record,
+            'nsmall_grid_record': self.nsmall_grid_record,
             'mouse_pos': self.mouse_pos, 
             'left_clicked': self.left_clicked, 
-            'right_clicked': self.right_clicked
+            'right_clicked': self.right_clicked, 
+            'game_over': self.game_over,
+            'winning_side': self.winning_side,
+            'nextb_cords': self.nextb_cords
 
             } #data to be sent from client to server
 
@@ -90,7 +108,7 @@ class HTTTClient:
         Method drawing the grid of the HTTT Board
         """
         for i in range(2):
-            for cord in box_cords[i][1:-1]:
+            for cord in box_cords[i][1:]: #Not drawing the first and last line so that the board doesn't look like a sudoku board
                 if i == 0:
                     self.start_pos = [cord, HTTT.START_CORD]
                     self.end_pos = [cord, HTTT.END_CORD]
@@ -98,6 +116,38 @@ class HTTTClient:
                     self.start_pos = [HTTT.START_CORD, cord]
                     self.end_pos = [HTTT.END_CORD, cord]
                 pygame.draw.line(self.screen, HTTT.BLACK, self.start_pos, self.end_pos, linewidth)
+
+    def draw_shapes(self, grid_record, size, linewidth):
+        """
+        Method drawing each shape and corresponding drawings (rects to cover up other shapes)
+        """
+        for row in range(len(grid_record[:,1])):
+            self.row_cord = (row*size+HTTT.START_CORD)
+
+            for col in range(len(grid_record[1,:])):
+                self.col_cord = (col*size+HTTT.START_CORD)
+
+                if size == HTTT.BBOX_SIZE and (self.row_cord != self.nextb_cords[0] or self.col_cord != self.nextb_cords[1]) and (grid_record[row, col] == 1 or grid_record[row, col] == 2):
+                    pygame.draw.rect(self.screen, HTTT.WHITE, [self.row_cord, self.col_cord, size, size])
+
+
+                elif size == HTTT.BBOX_SIZE and (self.row_cord == self.nextb_cords[0] and self.col_cord == self.nextb_cords[1]) and (grid_record[row, col] == 1 or grid_record[row, col] == 2):
+                    pygame.draw.rect(self.screen, HTTT.NBOX_COLOR, [self.row_cord, self.col_cord, size, size])
+
+                else:
+                    pass
+
+                if grid_record[row, col] == 1:
+                    pygame.draw.line(self.screen, HTTT.BLACK, [self.row_cord + HTTT.X_OFFSET, self.col_cord + HTTT.X_OFFSET], [self.row_cord + size - HTTT.X_OFFSET, self.col_cord + size - HTTT.X_OFFSET], linewidth)
+                    pygame.draw.line(self.screen, HTTT.BLACK, [self.row_cord + size - HTTT.X_OFFSET, self.col_cord + HTTT.X_OFFSET], [self.row_cord + HTTT.X_OFFSET, self.col_cord + size - HTTT.X_OFFSET], linewidth)
+
+                elif grid_record[row, col] == 2:
+                    pygame.draw.ellipse(self.screen, HTTT.BLACK, [self.row_cord + HTTT.O_OFFSET, self.col_cord + HTTT.O_OFFSET, size - 2*HTTT.O_OFFSET, size - 2*HTTT.O_OFFSET], linewidth)
+
+                else:
+                    pass
+
+
 
     def game_screen_aesthetics(self):
         self.screen.fill(HTTT.WHITE)
@@ -109,6 +159,7 @@ class HTTTClient:
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
+                self.n.send(HTTT.DISCONNECT)
                 sys.exit()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -145,8 +196,13 @@ class HTTTClient:
             while self.game_started and not self.quit_to_title:
                 # self.game_init()
                 self.game_screen_aesthetics()
+                # time.sleep(2)
                 self.if_input()
+                HTTT._update_dict_from_vars(self, self.game_dict)
                 self.game_dict = self.n.send(self.game_dict)
+                HTTT._update_vars_from_dict(self, self.game_dict)
+                self.draw_shapes(self.game_record, HTTT.LBOX_SIZE, HTTT.LXO_LINE_WIDTH)
+                self.draw_shapes(self.big_grid_record, HTTT.BBOX_SIZE, HTTT.BXO_LINE_WIDTH)
                 # self.make_move()
                 # self.draw_shapes(HTTT.LBOX_SIZE, HTTT.LXO_LINE_WIDTH)
                 # self.draw_shapes(HTTT.BBOX_SIZE, HTTT.BXO_LINE_WIDTH)

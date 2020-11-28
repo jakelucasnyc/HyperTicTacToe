@@ -35,14 +35,14 @@ class HTTT:
 
     #locations of the little boxes
     LBOX_SIZE = 80
-    LX_CORDS = list(range(START_CORD,END_CORD + 1,LBOX_SIZE))
-    LY_CORDS = list(range(START_CORD,END_CORD + 1,LBOX_SIZE))
+    LX_CORDS = list(range(START_CORD,END_CORD,LBOX_SIZE))
+    LY_CORDS = list(range(START_CORD,END_CORD,LBOX_SIZE))
     LBOX_CORDS = [LX_CORDS, LY_CORDS]
 
     #locations of the big boxes
     BBOX_SIZE = 3*LBOX_SIZE
-    BX_CORDS = list(range(START_CORD,END_CORD + 1,BBOX_SIZE))
-    BY_CORDS = list(range(START_CORD,END_CORD + 1,BBOX_SIZE))
+    BX_CORDS = list(range(START_CORD,END_CORD,BBOX_SIZE))
+    BY_CORDS = list(range(START_CORD,END_CORD,BBOX_SIZE))
     BBOX_CORDS = [BX_CORDS, BY_CORDS]
 
     #different line widths
@@ -57,3 +57,14 @@ class HTTT:
 
     #socket variables
     HEADERSIZE = 10
+    DISCONNECT = '!DISSCONNECT'
+
+    @staticmethod
+    def _update_vars_from_dict(obj, dictionary):
+        for key, value in dictionary.items():
+            setattr(obj, key, value)
+
+    @staticmethod
+    def _update_dict_from_vars(obj, dictionary):
+        for key, value in dictionary.items():
+            dictionary[key] = getattr(obj, key)
