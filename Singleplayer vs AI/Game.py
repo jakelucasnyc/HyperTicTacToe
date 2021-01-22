@@ -23,6 +23,7 @@ class Game:
     #locations of the grid edges
     START_CORD = 40
     END_CORD = 760
+    BOARD_SIZE = END_CORD-START_CORD
 
     #locations of the little boxes
     LBOX_SIZE = 80
@@ -41,6 +42,7 @@ class Game:
     BGLINE_WIDTH = 5
     LXO_LINE_WIDTH = 9
     BXO_LINE_WIDTH = 18
+    END_XO_LINE_WIDTH = 27
 
     #X and O formatting offsets
     X_OFFSET = 10
@@ -54,12 +56,15 @@ class Game:
         self.player1Exists = player1Exists
         self.player2Exists = player2Exists
         self.game_moves = 0
+        self.game_over = False
         self.game_record = np.zeros([9,9]) #array keeping track of the whole game grid
         self.big_grid_record = np.zeros([3,3]) #array keeping track of the big boxes that are completed
         self.small_grid_record = np.zeros([3,3]) #array representing the big box that I've clicked into and the values of each of the 9 boxes within it
         self.nsmall_grid_record = np.zeros([3,3]) #array representing the big box that I should go into next and the values of each of the 9 boxes within it
 
-        self.next_b_cords = None
+        self.next_b_cords = []
+        self.cords = []
+        self.b_cords = []
 
 
 
@@ -94,7 +99,7 @@ class Game:
 
     def draw_shapes(self, grid_record, size, linewidth, screen):
 
-        if self.next_b_cords is None or self.b_cords is None:
+        if not self.next_b_cords or not self.b_cords:
             return
         for row in range(len(grid_record[:,1])):
             row_cord = row*size+Game.START_CORD
@@ -102,8 +107,11 @@ class Game:
                 col_cord = col*size+Game.START_CORD
 
 
-                if size == Game.BBOX_SIZE and grid_record[row,col] != 0: #covering up smaller shapes if a box has been won
+                if size == Game.BBOX_SIZE and grid_record[row,col] != 0 and (row_cord != self.next_b_cords[0] or col_cord != self.next_b_cords[1]): #covering up smaller shapes if a box has been won
                     pygame.draw.rect(screen, Game.WHITE, [row_cord, col_cord, size, size])
+
+                elif size == Game.BBOX_SIZE and grid_record[row,col] != 0 and (row_cord == self.next_b_cords[0] and col_cord == self.next_b_cords[1]):
+                    pygame.draw.rect(screen, Game.NBOX_COLOR, [row_cord, col_cord, size, size])
 
 
                 if grid_record[row,col] == 1:
@@ -116,7 +124,7 @@ class Game:
 
 
     def draw_rects(self, big_grid_record, screen, size):
-        if self.next_b_cords is None or self.b_cords is None:
+        if not self.next_b_cords or not self.b_cords:
             return
         for row in range(len(big_grid_record[:,1])):
             row_cord = row*size+Game.START_CORD
@@ -151,23 +159,37 @@ class Game:
         self.b_cords, self.b_cords_idx = self._find_box(obj.mouse_pos, Game.BBOX_CORDS, Game.BBOX_SIZE)
         #print("b_cords", self.b_cords)
         #print("b_cords_idx", self.b_cords_idx)
+        if (not self.cords or not self.b_cords):
+            return
+
         if ((self.game_moves == 0) or
 
             (obj.mouse_pos[0] >= self.next_b_cords[0] and 
             obj.mouse_pos[0] < self.next_b_cords[0]+Game.BBOX_SIZE and 
             obj.mouse_pos[1] >= self.next_b_cords[1] and 
             obj.mouse_pos[1] < self.next_b_cords[1]+Game.BBOX_SIZE and
-            not np.all(self.nsmall_grid_record)) or
+            not np.all(self.nsmall_grid_record) and 
+            self.game_record[self.cords_idx[0], self.cords_idx[1]] == 0) or
 
-            np.all(self.nsmall_grid_record)):
+            np.all(self.nsmall_grid_record) and self.game_record[self.cords_idx[0], self.cords_idx[1]] == 0):
 
             self.game_moves += 1
             self._update_grid_record(obj, self.game_record, self.cords_idx)
             self._isolate_little_box(self.game_record, self.cords_idx)
             self._identify_next_big_box(self.small_grid_elems, self.game_record)
+
             self.winning_box_side = self._grid_win_check(self.small_grid_record)
             if self.winning_box_side and self.winning_box_side == obj.side:
                 self._update_grid_record(obj, self.big_grid_record, self.b_cords_idx)
+                self.small_grid_record[self.small_grid_record == 0] = 3
+                print(self.small_grid_record)
+                print(self.game_record)
+
+            self.winning_game_side = self._grid_win_check(self.big_grid_record)
+            if self.winning_game_side:
+                self.game_over = True
+
+
 
 
 
@@ -180,12 +202,14 @@ class Game:
                     cords.append(cord)
                     cords_idx.append(int((cord-Game.START_CORD)/size))
                     break
+        if len(cords) != 2:
+            cords = []
+            cords_idx = []
         return cords, cords_idx
 
     def _update_grid_record(self, obj, grid_record, cords_idx):
 
-        if grid_record[cords_idx[0], cords_idx[1]] == 0:
-            grid_record[cords_idx[0], cords_idx[1]] = obj.side
+        grid_record[cords_idx[0], cords_idx[1]] = obj.side
 
 
     def _isolate_little_box(self, game_record, cords_idx):
@@ -223,13 +247,21 @@ class Game:
             return 0
 
 
-    def end(self):
-        pass
+    def end(self, winning_game_side):
+        pygame.draw.rect(self.screen, Game.WHITE, [Game.START_CORD, Game.START_CORD, Game.BOARD_SIZE, Game.BOARD_SIZE])
+        if self.winning_game_side == 1:
+            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
+            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
+        elif self.winning_game_side == 2:
+            pygame.draw.ellipse(self.screen, Game.BLACK, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH)
 
 
 if __name__ == "__main__":
     game_inst = Game()
     game_inst.screen.fill(Game.WHITE)
+    game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
+    game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
+    pygame.display.update()
     while True:
         game_inst.start()
         if game_inst.game_moves % 2 == 0:
@@ -238,9 +270,13 @@ if __name__ == "__main__":
         elif game_inst.game_moves % 2 == 1:
             game_inst.input(game_inst.player2)
             game_inst.update_objects(game_inst.player2)
+        if not game_inst.cords or not game_inst.b_cords:
+            continue
         game_inst.draw_rects(game_inst.big_grid_record, game_inst.screen, Game.BBOX_SIZE)
         game_inst.draw_shapes(game_inst.game_record, Game.LBOX_SIZE, Game.LXO_LINE_WIDTH, game_inst.screen)
         game_inst.draw_shapes(game_inst.big_grid_record, Game.BBOX_SIZE, Game.BXO_LINE_WIDTH, game_inst.screen)
+        if game_inst.game_over:
+            game_inst.end(game_inst.winning_game_side)
         game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
         game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
         pygame.display.update()
