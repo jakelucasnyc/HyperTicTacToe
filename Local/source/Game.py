@@ -6,6 +6,9 @@ from AI import AI
 from Button import Button
 # from AI import AI
 
+isPlayer1Human = True
+isPlayer2Human = True
+
 class Game:
     pygame.init()
 
@@ -244,8 +247,8 @@ class Game:
             if self.winning_box_side and (self.winning_box_side == obj.side or self.winning_box_side == 3):
                 self._update_grid_record(obj, self.big_grid_record, self.b_cords_idx)
                 self.small_grid_record[self.small_grid_record == 0] = 3
-                print(self.small_grid_record)
-                print(self.game_record)
+                # print(self.small_grid_record)
+                # print(self.game_record)
 
             self._identify_next_big_box(self.small_grid_elems, self.game_record)#big grid must be updated before this method can be called
 
@@ -297,14 +300,14 @@ class Game:
             self.next_cords = [small_grid_elems[0]*3, small_grid_elems[1]*3]
             self.next_box_list.append(self.next_cords)
             self.next_b_cords = [(small_grid_elems[0]*Game.BBOX_SIZE)+Game.START_CORD, (small_grid_elems[1]*Game.BBOX_SIZE)+Game.START_CORD]
-            print(self.next_box_list)
+            # print(self.next_box_list)
         else:
-            print("entered else clause of _identify_next_big_box")
+            # print("entered else clause of _identify_next_big_box")
             for prev_next_cords in reversed(self.next_box_list[:-1]):
                 if self.big_grid_record[int(prev_next_cords[0]/3), int(prev_next_cords[1]/3)] == 0:
                     self.next_cords = prev_next_cords
                     self.next_b_cords = [(int(prev_next_cords[0]/3*Game.BBOX_SIZE)+Game.START_CORD), (int(prev_next_cords[1]/3*Game.BBOX_SIZE)+Game.START_CORD)] #setting the next box cords to the location of the newly proposed next box
-                    print(self.next_cords)
+                    # print(self.next_cords)
                     break
             else:
                 if not np.all(self.game_record):
@@ -312,7 +315,7 @@ class Game:
 
 
         self.nsmall_grid_record = game_record[self.next_cords[0]:self.next_cords[0]+3, self.next_cords[1]:self.next_cords[1]+3]
-        print("nsmall_grid_record ", self.nsmall_grid_record)
+        # print("nsmall_grid_record ", self.nsmall_grid_record)
 
 
     def _grid_win_check(self, grid_record):
@@ -389,7 +392,7 @@ class Game:
 
 
 def main():
-    game_inst = Game(True, True)
+    game_inst = Game(isPlayer1Human, isPlayer2Human)
     game_inst.screen.fill(Game.WHITE)
     game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
     game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
