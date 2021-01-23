@@ -2,6 +2,7 @@ import pygame
 import sys
 import numpy as np
 from Player import Player
+from AI import AI
 # from AI import AI
 
 class Game:
@@ -50,11 +51,11 @@ class Game:
 
 
 
-    def __init__(self, player1Exists=True, player2Exists=True):
+    def __init__(self, player1IsHuman, player2IsHuman):
         pygame.init()
         self.screen = pygame.display.set_mode((Game.WIDTH, Game.HEIGHT))
-        self.player1Exists = player1Exists
-        self.player2Exists = player2Exists
+        self.player1IsHuman = player1IsHuman
+        self.player2IsHuman = player2IsHuman
         self.game_moves = 0
         self.game_over = False
         self.game_record = np.zeros([9,9]) #array keeping track of the whole game grid
@@ -69,16 +70,14 @@ class Game:
 
 
 
-    def start(self):
+    def init(self):
 
-        
-
-        if (self.player1Exists):
+        if (self.player1IsHuman):
             self.player1 = Player(Game.SIDE_X)
         else:
             self.player1 = AI(Game.SIDE_X)
 
-        if (self.player2Exists):
+        if (self.player2IsHuman):
             self.player2 = Player(Game.SIDE_O)
         else:
             self.player2 = AI(Game.SIDE_O)
@@ -143,7 +142,10 @@ class Game:
             if event.type == pygame.QUIT:
                 sys.exit()
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if isinstance(obj, AI): #sending the AI game info relevant to its moving
+                obj.get_game_moves(self.game_moves)
+
+            if event.type == pygame.MOUSEBUTTONDOWN or (isinstance(obj, AI) and obj.AI_turn == True):
                 obj.mouse_pos = obj.get_mouse_pos()
                 obj.clicked = True
 
@@ -257,13 +259,13 @@ class Game:
 
 
 if __name__ == "__main__":
-    game_inst = Game()
+    game_inst = Game(False, True)
     game_inst.screen.fill(Game.WHITE)
     game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
     game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
     pygame.display.update()
     while True:
-        game_inst.start()
+        game_inst.init()
         if game_inst.game_moves % 2 == 0:
             game_inst.input(game_inst.player1)
             game_inst.update_objects(game_inst.player1)
