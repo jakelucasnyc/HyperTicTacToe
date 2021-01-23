@@ -22,7 +22,8 @@ class Game:
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
     SADDLEBROWN = (139, 69, 19)
-    GRAY = (93, 93, 93)
+    GRAY = (110, 110, 110)
+    MELLOW_YELLOW = (248, 222, 126)
     NBOX_COLOR = RED
     CGRATS_COLOR = BLUE
     CGRATS_FONT = pygame.font.Font('../resources/SIFONN_PRO.otf', 90)
@@ -81,7 +82,9 @@ class Game:
         self.cords = []
         self.b_cords = []
 
-        #buttons
+        #icon color
+        self.X_color = Game.GRAY
+        self.O_color = Game.GRAY
         
 
         #post game
@@ -158,11 +161,32 @@ class Game:
                     pygame.draw.rect(screen, Game.NBOX_COLOR, [row_cord, col_cord, size, size])
 
     def game_info_display(self):
-        self.game_moves_display = Button(860, 40, 300, 80, Game.GRAY, Game.BUTTON_FONT, f"Game Moves: {self.game_moves}", self.screen)
+        self.game_moves_display = Button(820, 40, 320, 80, Game.BLACK, Game.BUTTON_FONT, f"Game Moves: {self.game_moves}", self.screen)
         self.game_moves_display.draw_button()
 
-        self.resign_button = Button(860, 160, 300, 80, Game.GRAY, Game.BUTTON_FONT, "Resign", self.screen)
-        self.resign_button.draw_button()
+        # self.resign_button = Button(820, 160, 320, 80, Game.GRAY, Game.BUTTON_FONT, "Resign", self.screen)
+        # self.resign_button.draw_button()
+
+        
+
+        if self.game_moves % 2 == 0 and not self.game_over:
+            self.X_color = Game.MELLOW_YELLOW
+            self.O_color = Game.GRAY
+
+        elif self.game_moves % 2 == 1 and not self.game_over:
+            self.O_color = Game.MELLOW_YELLOW
+            self.X_color = Game.GRAY
+
+        else:
+            self.X_color = Game.GRAY
+            self.O_color = Game.GRAY
+
+        self.X_icon = Button(860, 160, 80, 80, self.X_color, Game.BUTTON_FONT, "X", self.screen)
+        self.X_icon.draw_button()
+
+        self.O_icon = Button(1020, 160, 80, 80, self.O_color, Game.BUTTON_FONT, "O", self.screen)
+        self.O_icon.draw_button()
+
         pygame.display.update()
 
 
@@ -365,7 +389,7 @@ class Game:
 
 
 def main():
-    game_inst = Game(False, False)
+    game_inst = Game(True, True)
     game_inst.screen.fill(Game.WHITE)
     game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
     game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
