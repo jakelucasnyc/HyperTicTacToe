@@ -1,4 +1,12 @@
+import pygame
+
 class Button:
+
+    BLACK = (0, 0, 0)
+    WHITE = (255, 255, 255)
+    RED = (255, 0, 0)
+    GREEN = (0, 255, 0)
+    BLUE = (0, 0, 255)
 
     def __init__(self, x, y, width, height, color, font, text, screen):
         self.x = x
@@ -12,11 +20,12 @@ class Button:
 
     def draw_button(self):
         pygame.draw.rect(self.screen, self.color, (self.x, self.y, self.width, self.height))
-        rendered_text = self.font.render(self.text, True, HTTT.WHITE)
-        if self.width > rendered_text.get_rect().width:
-            text_cords = [int(self.x + ((self.width-rendered_text.get_rect().width)/2)), int(self.y + ((self.height-rendered_text.get_rect().height)/1.5))] #there's a 1.5 here because the buttons look better that way
-        else:
-            raise Exception('The button rect must be wider than the text width')
+        rendered_text = self.font.render(self.text, True, Button.WHITE)
+        # if self.width > rendered_text.get_rect().width:
+        #     text_cords = [int(self.x + ((self.width-rendered_text.get_rect().width)/2)), int(self.y + ((self.height-rendered_text.get_rect().height)/1.5))] #there's a 1.5 here because the buttons look better that way
+        # else:
+        #     raise Exception('The button rect must be wider than the text width')
+        text_cords = [int(self.x + ((self.width-rendered_text.get_rect().width)/2)), int(self.y + ((self.height-rendered_text.get_rect().height)/1.5))]
         self.screen.blit(rendered_text, text_cords)
 
     def is_clicked(self, mouse_pos):

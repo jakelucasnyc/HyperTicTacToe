@@ -21,16 +21,17 @@ class Game:
     RED = (255, 0, 0)
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
+    SADDLEBROWN = (139, 69, 19)
     NBOX_COLOR = RED
     CGRATS_COLOR = BLUE
-    CGRATS_FONT = pygame.font.Font('../resources/SIFONN_PRO.otf', 45)
+    CGRATS_FONT = pygame.font.Font('../resources/SIFONN_PRO.otf', 90)
     BUTTON_FONT = pygame.font.Font('../resources/SIFONN_PRO.otf', 36)
 
     #board stats
     START_CORD = 40
     END_CORD = 760
     BOARD_SIZE = END_CORD-START_CORD
-    BOARD_CENTER = BOARD_SIZE/2
+    BOARD_CENTER = (BOARD_SIZE/2)+40
 
     #locations of the little boxes
     LBOX_SIZE = 80
@@ -56,7 +57,7 @@ class Game:
     O_OFFSET = 7
 
     #end aesthetics variables
-    CGRATS_CENTER_DISP = [300, 150] #[x disp rom center, y disp from center]
+    CGRATS_CENTER_DISP = [200, 100] #[x disp rom center, y disp from center]
 
 
 
@@ -74,6 +75,13 @@ class Game:
         self.next_b_cords = []
         self.cords = []
         self.b_cords = []
+
+        #buttons
+        self.replay_button = Button(Game.BOARD_CENTER-120, Game.BOARD_CENTER+120, 240, 80, Game.GREEN, Game.BUTTON_FONT, "Replay", self.screen)
+
+        #post game
+        self.post_game_mouse_pos = None
+        self.post_game_clicked = False
 
 
 
@@ -141,17 +149,23 @@ class Game:
                 if (row_cord == self.b_cords[0] and col_cord == self.b_cords[1]): #covering up the previously red boxes
                         pygame.draw.rect(screen, Game.WHITE, [row_cord, col_cord, size, size])
 
-                elif (row_cord == self.next_b_cords[0] and col_cord == self.next_b_cords[1]): #making the next box red
+                if (row_cord == self.next_b_cords[0] and col_cord == self.next_b_cords[1]): #making the next box red
                     pygame.draw.rect(screen, Game.NBOX_COLOR, [row_cord, col_cord, size, size])
 
+    def game_info_display(self):
+        self.game_moves_display = Button(860, 40, 300, 80, Game.SADDLEBROWN, Game.BUTTON_FONT, f"Game Moves: {self.game_moves}", self.screen)
+        self.game_moves_display.draw_button()
+        pygame.display.update()
 
-    def input(self, obj):
+
+    def inform_and_input(self, obj):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
 
             if isinstance(obj, AI): #sending the AI game info relevant to its moving
                 obj.get_game_moves(self.game_moves)
+                obj.get_info(self.game_over)
 
             if event.type == pygame.MOUSEBUTTONDOWN or (isinstance(obj, AI) and obj.AI_turn == True):
                 obj.mouse_pos = obj.get_mouse_pos()
@@ -267,16 +281,38 @@ class Game:
 
     def end_aesthetics(self, winning_game_side):
         if winning_game_side == 1:
-            congrats = Button(Game.BOARD_CENTER-CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-CGRATS_CENTER_DISP[1], Game.BOARD_CENTER-CGRATS_CENTER_DISP[0]*2, Game.BOARD_CENTER-CGRATS_CENTER_DISP[1]*2, CGRATS_COLOR, CGRATS_FONT, "X WINS!", self.screen)
+            congrats = Button(Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[1], Game.CGRATS_CENTER_DISP[0]*2, Game.CGRATS_CENTER_DISP[1]*2, Game.CGRATS_COLOR, Game.CGRATS_FONT, "X WINS!", self.screen)
             congrats.draw_button()
         elif winning_game_side == 2:
-            congrats = Button(Game.BOARD_CENTER-CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-CGRATS_CENTER_DISP[1], Game.BOARD_CENTER-CGRATS_CENTER_DISP[0]*2, Game.BOARD_CENTER-CGRATS_CENTER_DISP[1]*2, CGRATS_COLOR, CGRATS_FONT, "O WINS!", self.screen)
+            congrats = Button(Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[1], Game.CGRATS_CENTER_DISP[0]*2, Game.CGRATS_CENTER_DISP[1]*2, Game.CGRATS_COLOR, Game.CGRATS_FONT, "O WINS!", self.screen)
             congrats.draw_button()
 
+        self.replay_button.draw_button()
+        pygame.display.update()
+
+    def post_game_input(self):
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                sys.exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.post_game_mouse_pos = pygame.mouse.get_pos()
+                self.post_game_clicked = True
+            else:
+                self.post_game_clicked = False
+
+    def post_game_steps(self, main):
+        if self.post_game_mouse_pos is None:
+            return
+
+        if self.replay_button.is_clicked(self.post_game_mouse_pos) and self.post_game_clicked:
+            # print("Replay Clicked")
+            main()
 
 
-if __name__ == "__main__":
-    game_inst = Game(False, True)
+def main():
+    game_inst = Game(True, False)
     game_inst.screen.fill(Game.WHITE)
     game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
     game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
@@ -284,11 +320,12 @@ if __name__ == "__main__":
     while True:
         game_inst.init()
         if game_inst.game_moves % 2 == 0:
-            game_inst.input(game_inst.player1)
+            game_inst.inform_and_input(game_inst.player1)
             game_inst.update_objects(game_inst.player1)
         elif game_inst.game_moves % 2 == 1:
-            game_inst.input(game_inst.player2)
+            game_inst.inform_and_input(game_inst.player2)
             game_inst.update_objects(game_inst.player2)
+        game_inst.game_info_display()
         if not game_inst.cords or not game_inst.b_cords:
             continue
         game_inst.draw_rects(game_inst.big_grid_record, game_inst.screen, Game.BBOX_SIZE)
@@ -298,9 +335,16 @@ if __name__ == "__main__":
             game_inst.end(game_inst.winning_game_side)
         game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
         game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
-        congrats = Button(Game.BOARD_CENTER-CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-CGRATS_CENTER_DISP[1], Game.BOARD_CENTER-CGRATS_CENTER_DISP[0]*2, Game.BOARD_CENTER-CGRATS_CENTER_DISP[1]*2, CGRATS_COLOR, CGRATS_FONT, "O WINS!", self.screen)
-        congrats.draw_button()
+        while (game_inst.game_over):
+        # while True:
+            game_inst.end_aesthetics(1)
+            game_inst.post_game_input()
+            game_inst.post_game_steps(main)
+
         pygame.display.update()
+
+if __name__ == "__main__":
+    main()
 
 
 
