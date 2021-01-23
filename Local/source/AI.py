@@ -4,6 +4,7 @@ class AI:
 
     START_CORD = 40
     END_CORD = 760
+    BBOX_SIZE = 80*3
     BOARD_SIZE = END_CORD-START_CORD
 
     def __init__(self, side):
@@ -21,13 +22,19 @@ class AI:
         else:
             self.AI_turn = False
 
-    def get_info(self, game_over):
+    def get_info(self, game_over, next_b_cords, game_record):
         self.game_over = game_over
+        self.next_b_cords = next_b_cords
 
     def get_mouse_pos(self):
-        while (self.game_moves % 2 == self.side-1):
+        if not self.next_b_cords:
             move_cords = [random.randint(AI.START_CORD, AI.END_CORD), random.randint(AI.START_CORD, AI.END_CORD)]
-
             return move_cords
+
+        move_cords = [random.randint(self.next_b_cords[0], self.next_b_cords[0]+AI.BBOX_SIZE-1), random.randint(self.next_b_cords[1], self.next_b_cords[1]+AI.BBOX_SIZE-1)]
+
+        print("move_cords ", move_cords)
+
+        return move_cords
 
     

@@ -22,6 +22,7 @@ class Game:
     GREEN = (0, 255, 0)
     BLUE = (0, 0, 255)
     SADDLEBROWN = (139, 69, 19)
+    GRAY = (93, 93, 93)
     NBOX_COLOR = RED
     CGRATS_COLOR = BLUE
     CGRATS_FONT = pygame.font.Font('../resources/SIFONN_PRO.otf', 90)
@@ -63,21 +64,25 @@ class Game:
 
     def __init__(self, player1IsHuman, player2IsHuman):
         self.screen = pygame.display.set_mode((Game.WIDTH, Game.HEIGHT))
+        self.clock = pygame.time.Clock()
+        self.clock.tick(60)
         self.player1IsHuman = player1IsHuman
         self.player2IsHuman = player2IsHuman
         self.game_moves = 0
         self.game_over = False
+        self.game_drawn = False
         self.game_record = np.zeros([9,9]) #array keeping track of the whole game grid
         self.big_grid_record = np.zeros([3,3]) #array keeping track of the big boxes that are completed
         self.small_grid_record = np.zeros([3,3]) #array representing the big box that I've clicked into and the values of each of the 9 boxes within it
         self.nsmall_grid_record = np.zeros([3,3]) #array representing the big box that I should go into next and the values of each of the 9 boxes within it
 
         self.next_b_cords = []
+        self.next_box_list = []
         self.cords = []
         self.b_cords = []
 
         #buttons
-        self.replay_button = Button(Game.BOARD_CENTER-120, Game.BOARD_CENTER+120, 240, 80, Game.GREEN, Game.BUTTON_FONT, "Replay", self.screen)
+        
 
         #post game
         self.post_game_mouse_pos = None
@@ -153,8 +158,11 @@ class Game:
                     pygame.draw.rect(screen, Game.NBOX_COLOR, [row_cord, col_cord, size, size])
 
     def game_info_display(self):
-        self.game_moves_display = Button(860, 40, 300, 80, Game.SADDLEBROWN, Game.BUTTON_FONT, f"Game Moves: {self.game_moves}", self.screen)
+        self.game_moves_display = Button(860, 40, 300, 80, Game.GRAY, Game.BUTTON_FONT, f"Game Moves: {self.game_moves}", self.screen)
         self.game_moves_display.draw_button()
+
+        self.resign_button = Button(860, 160, 300, 80, Game.GRAY, Game.BUTTON_FONT, "Resign", self.screen)
+        self.resign_button.draw_button()
         pygame.display.update()
 
 
@@ -163,20 +171,26 @@ class Game:
             if event.type == pygame.QUIT:
                 sys.exit()
 
-            if isinstance(obj, AI): #sending the AI game info relevant to its moving
-                obj.get_game_moves(self.game_moves)
-                obj.get_info(self.game_over)
-
-            if event.type == pygame.MOUSEBUTTONDOWN or (isinstance(obj, AI) and obj.AI_turn == True):
+            if event.type == pygame.MOUSEBUTTONDOWN and isinstance(obj, Player):
                 obj.mouse_pos = obj.get_mouse_pos()
                 obj.clicked = True
 
             else:
                 obj.clicked = False
 
+        if isinstance(obj, AI): #sending the AI game info relevant to its moving
+            obj.get_game_moves(self.game_moves)
+            obj.get_info(self.game_over, self.next_b_cords, self.game_record)
+            if obj.AI_turn: #if it's the AI's turn
+                obj.mouse_pos = obj.get_mouse_pos()
+                obj.clicked = True
+            else:
+                obj.clicked = False
+
     def update_objects(self, obj):
         if obj.mouse_pos is None:
-            return
+            self.inform_and_input(obj) #take more input because no input was previously supplied
+            return 
         self.cords, self.cords_idx = self._find_box(obj.mouse_pos, Game.LBOX_CORDS, Game.LBOX_SIZE)
         #print("cords", self.cords)
         #print("cords_idx", self.cords_idx)
@@ -184,6 +198,7 @@ class Game:
         #print("b_cords", self.b_cords)
         #print("b_cords_idx", self.b_cords_idx)
         if (not self.cords or not self.b_cords):
+            self.inform_and_input(obj) #take more input because an invalid input was previously supplied
             return
 
         if ((self.game_moves == 0) or
@@ -193,25 +208,30 @@ class Game:
             obj.mouse_pos[1] >= self.next_b_cords[1] and 
             obj.mouse_pos[1] < self.next_b_cords[1]+Game.BBOX_SIZE and
             not np.all(self.nsmall_grid_record) and 
-            self.game_record[self.cords_idx[0], self.cords_idx[1]] == 0) or
-
-            np.all(self.nsmall_grid_record) and self.game_record[self.cords_idx[0], self.cords_idx[1]] == 0):
+            self.game_record[self.cords_idx[0], self.cords_idx[1]] == 0)):
 
             self.game_moves += 1
             self._update_grid_record(obj, self.game_record, self.cords_idx)
             self._isolate_little_box(self.game_record, self.cords_idx)
-            self._identify_next_big_box(self.small_grid_elems, self.game_record)
 
-            self.winning_box_side = self._grid_win_check(self.small_grid_record)
-            if self.winning_box_side and self.winning_box_side == obj.side:
+            if self.big_grid_record[self.b_cords_idx[0], self.b_cords_idx[1]] == 0:
+                self.winning_box_side = self._grid_win_check(self.small_grid_record)
+
+            if self.winning_box_side and (self.winning_box_side == obj.side or self.winning_box_side == 3):
                 self._update_grid_record(obj, self.big_grid_record, self.b_cords_idx)
                 self.small_grid_record[self.small_grid_record == 0] = 3
                 print(self.small_grid_record)
                 print(self.game_record)
 
+            self._identify_next_big_box(self.small_grid_elems, self.game_record)#big grid must be updated before this method can be called
+
             self.winning_game_side = self._grid_win_check(self.big_grid_record)
             if self.winning_game_side:
                 self.game_over = True
+
+            if np.all(self.game_record):
+                self.game_over = True
+                self.game_drawn = True
 
 
 
@@ -246,9 +266,29 @@ class Game:
 
     
     def _identify_next_big_box(self, small_grid_elems, game_record):
-        self.next_b_cords = [(small_grid_elems[0]*Game.BBOX_SIZE)+Game.START_CORD, (small_grid_elems[1]*Game.BBOX_SIZE)+Game.START_CORD]
-        self.next_cords = [small_grid_elems[0]*3, small_grid_elems[1]*3]
+        
+
+        if self.big_grid_record[self.small_grid_elems[0], self.small_grid_elems[1]] == 0: #if the proposed next big box has room for other shapes...
+
+            self.next_cords = [small_grid_elems[0]*3, small_grid_elems[1]*3]
+            self.next_box_list.append(self.next_cords)
+            self.next_b_cords = [(small_grid_elems[0]*Game.BBOX_SIZE)+Game.START_CORD, (small_grid_elems[1]*Game.BBOX_SIZE)+Game.START_CORD]
+            print(self.next_box_list)
+        else:
+            print("entered else clause of _identify_next_big_box")
+            for prev_next_cords in reversed(self.next_box_list[:-1]):
+                if self.big_grid_record[int(prev_next_cords[0]/3), int(prev_next_cords[1]/3)] == 0:
+                    self.next_cords = prev_next_cords
+                    self.next_b_cords = [(int(prev_next_cords[0]/3*Game.BBOX_SIZE)+Game.START_CORD), (int(prev_next_cords[1]/3*Game.BBOX_SIZE)+Game.START_CORD)] #setting the next box cords to the location of the newly proposed next box
+                    print(self.next_cords)
+                    break
+            else:
+                if not np.all(self.game_record):
+                    raise Exception("No empty big box for the next shape to go into")
+
+
         self.nsmall_grid_record = game_record[self.next_cords[0]:self.next_cords[0]+3, self.next_cords[1]:self.next_cords[1]+3]
+        print("nsmall_grid_record ", self.nsmall_grid_record)
 
 
     def _grid_win_check(self, grid_record):
@@ -267,6 +307,10 @@ class Game:
             if grid_record[0,2] == winning_side and grid_record[0,2] == grid_record[1,1] and grid_record[0,2] == grid_record[2,0]:
                 return winning_side
 
+        
+            elif np.all(grid_record):
+                return 3 #drawn
+
         else:
             return 0
 
@@ -278,16 +322,25 @@ class Game:
             pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
         elif self.winning_game_side == 2:
             pygame.draw.ellipse(self.screen, Game.BLACK, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big O
+        elif self.game_drawn:
+            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big X
+            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
+            pygame.draw.ellipse(self.screen, Game.BLACK, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH)
 
-    def end_aesthetics(self, winning_game_side):
+    def end_aesthetics(self, winning_game_side, game_drawn):
         if winning_game_side == 1:
             congrats = Button(Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[1], Game.CGRATS_CENTER_DISP[0]*2, Game.CGRATS_CENTER_DISP[1]*2, Game.CGRATS_COLOR, Game.CGRATS_FONT, "X WINS!", self.screen)
             congrats.draw_button()
         elif winning_game_side == 2:
             congrats = Button(Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[1], Game.CGRATS_CENTER_DISP[0]*2, Game.CGRATS_CENTER_DISP[1]*2, Game.CGRATS_COLOR, Game.CGRATS_FONT, "O WINS!", self.screen)
             congrats.draw_button()
+        elif game_drawn:
+            congrats = Button(Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[1], Game.CGRATS_CENTER_DISP[0]*2, Game.CGRATS_CENTER_DISP[1]*2, Game.CGRATS_COLOR, Game.CGRATS_FONT, "DRAW!", self.screen)
+            congrats.draw_button()
 
+        self.replay_button = Button(Game.BOARD_CENTER-120, Game.BOARD_CENTER+120, 240, 80, Game.GREEN, Game.BUTTON_FONT, "Replay", self.screen)
         self.replay_button.draw_button()
+
         pygame.display.update()
 
     def post_game_input(self):
@@ -312,7 +365,7 @@ class Game:
 
 
 def main():
-    game_inst = Game(True, False)
+    game_inst = Game(False, False)
     game_inst.screen.fill(Game.WHITE)
     game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
     game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
@@ -337,7 +390,7 @@ def main():
         game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
         while (game_inst.game_over):
         # while True:
-            game_inst.end_aesthetics(1)
+            game_inst.end_aesthetics(game_inst.winning_game_side, game_inst.game_drawn)
             game_inst.post_game_input()
             game_inst.post_game_steps(main)
 
