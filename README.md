@@ -16,6 +16,8 @@ The catch is that, for example, if a player makes a move in the lower right corn
 
 ![Illustration of move rule](gameImages/randomMove2.png?raw=true)
 
+Basically, each move determines where the next move must be played by taking the relative location of a move (for instance, top right corner of a small grid) and making it so that the opponent must move in the corresponding big box (in this case, the top right big box).
+
 If that box is already taken, another suitable box will be chosen by iterating through prevous big boxes in which moves were to be played (the ones colored in red) and checking if they can be moved in or not.
 
 ## Navigating the Repository
