@@ -74,7 +74,7 @@ class Game:
     def __init__(self, player1IsHuman, player2IsHuman):
         self.screen = pygame.display.set_mode((Game.WIDTH, Game.HEIGHT))
         self.clock = pygame.time.Clock()
-        self.clock.tick(60)
+        # self.clock.tick(60)
         self.player1IsHuman = player1IsHuman
         self.player2IsHuman = player2IsHuman
         self.game_moves = 0
@@ -393,28 +393,6 @@ class Game:
 
         pygame.display.update()
 
-    # def post_game_input(self):
-
-    #     for event in pygame.event.get():
-    #         if event.type == pygame.QUIT:
-    #             sys.exit()
-
-    #         if event.type == pygame.MOUSEBUTTONDOWN:
-    #             self.post_game_mouse_pos = pygame.mouse.get_pos()
-    #             self.post_game_clicked = True
-    #         else:
-    #             self.post_game_clicked = False
-
-    # def post_game_steps(self):
-    #     if self.post_game_mouse_pos is None:
-    #         return
-
-    #     if self.replay_button.is_clicked(self.post_game_mouse_pos) and self.post_game_clicked:
-    #         # print("Replay Clicked")
-    #         game_loop()
-
-    #     if self.quit_to_title.is_clicked(self.post_game_mouse_pos) and self.post_game_clicked:
-
 
 def title():
     title_inst = Title()
@@ -443,7 +421,7 @@ def game_loop(flags):
             game_inst.inform_and_input(game_inst.player2)
             game_inst.update_objects(game_inst.player2)
         if game_inst.quit:
-            return True #preparing to restart the loop of title to game
+            return True #preparing to restart the main loop
         game_inst.side_panel_display()
         if not game_inst.cords or not game_inst.b_cords:
             continue
@@ -458,12 +436,12 @@ def game_loop(flags):
         game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
 
         if game_inst.game_over:
-            game_inst.end_aesthetics(game_inst.winning_game_side, game_inst.game_drawn)
-        # while (game_inst.game_over):
-        # # while True:
-        #     game_inst.end_aesthetics(game_inst.winning_game_side, game_inst.game_drawn)
-        #     game_inst.post_game_input()
-        #     game_inst.post_game_steps()
+            while True:
+                game_inst.end_aesthetics(game_inst.winning_game_side, game_inst.game_drawn)
+                game_inst.inform_and_input(game_inst.player1)
+                game_inst.inform_and_input(game_inst.player2)
+                if game_inst.quit:
+                    return True #preparing to restart the main loop
 
         pygame.display.update()
 
