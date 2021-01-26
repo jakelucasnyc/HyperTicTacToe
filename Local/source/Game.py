@@ -4,10 +4,12 @@ import numpy as np
 from Player import Player
 from AI import AI
 from Button import Button
+from Title import Title
 # from AI import AI
 
-isPlayer1Human = True
-isPlayer2Human = True
+flags = (True, True)
+# isPlayer1Human = True
+# isPlayer2Human = True
 
 class Game:
     pygame.init()
@@ -15,6 +17,8 @@ class Game:
     #display data
     WIDTH = 1200
     HEIGHT = 800
+    CENTER_X = WIDTH//2
+    CENTER_Y = HEIGHT//2
 
     SIDE_X = 1
     SIDE_O = 2
@@ -31,6 +35,7 @@ class Game:
     CGRATS_COLOR = BLUE
     CGRATS_FONT = pygame.font.Font('../resources/SIFONN_PRO.otf', 90)
     BUTTON_FONT = pygame.font.Font('../resources/SIFONN_PRO.otf', 36)
+    
 
     #board stats
     START_CORD = 40
@@ -75,6 +80,7 @@ class Game:
         self.game_moves = 0
         self.game_over = False
         self.game_drawn = False
+        self.quit = False
         self.game_record = np.zeros([9,9]) #array keeping track of the whole game grid
         self.big_grid_record = np.zeros([3,3]) #array keeping track of the big boxes that are completed
         self.small_grid_record = np.zeros([3,3]) #array representing the big box that I've clicked into and the values of each of the 9 boxes within it
@@ -120,6 +126,7 @@ class Game:
                     self.start_pos = [Game.START_CORD, cord]
                     self.end_pos = [Game.END_CORD, cord]
                 pygame.draw.line(screen, Game.BLACK, self.start_pos, self.end_pos, linewidth)
+        # pygame.display.update()
 
 
 
@@ -147,6 +154,8 @@ class Game:
                 elif grid_record[row,col] == 2:
                     pygame.draw.ellipse(screen, Game.BLACK, [row_cord+Game.O_OFFSET, col_cord+Game.O_OFFSET, size-2*Game.O_OFFSET, size-2*Game.O_OFFSET], linewidth)
 
+        # pygame.display.update()
+
 
 
     def draw_rects(self, big_grid_record, screen, size):
@@ -163,7 +172,9 @@ class Game:
                 if (row_cord == self.next_b_cords[0] and col_cord == self.next_b_cords[1]): #making the next box red
                     pygame.draw.rect(screen, Game.NBOX_COLOR, [row_cord, col_cord, size, size])
 
-    def game_info_display(self):
+        # pygame.display.update()
+
+    def side_panel_display(self):
         self.game_moves_display = Button(820, 40, 320, 80, Game.BLACK, Game.BUTTON_FONT, f"Game Moves: {self.game_moves}", self.screen)
         self.game_moves_display.draw_button()
 
@@ -190,6 +201,12 @@ class Game:
         self.O_icon = Button(1020, 160, 80, 80, self.O_color, Game.BUTTON_FONT, "O", self.screen)
         self.O_icon.draw_button()
 
+        self.replay_button = Button(820, 540, 320, 80, Game.GREEN, Game.BUTTON_FONT, "Replay", self.screen)
+        self.replay_button.draw_button()
+
+        self.quit_to_title = Button(820, 660, 320, 80, Game.BLACK, Game.BUTTON_FONT, "Quit to Title", self.screen)
+        self.quit_to_title.draw_button()
+
         pygame.display.update()
 
 
@@ -201,6 +218,12 @@ class Game:
             if event.type == pygame.MOUSEBUTTONDOWN and isinstance(obj, Player):
                 obj.mouse_pos = obj.get_mouse_pos()
                 obj.clicked = True
+
+                if self.replay_button.is_clicked(obj.mouse_pos) and obj.clicked:
+                    game_loop(flags)
+
+                if self.quit_to_title.is_clicked(obj.mouse_pos) and obj.clicked:
+                    self.quit = True
 
             else:
                 obj.clicked = False
@@ -303,9 +326,10 @@ class Game:
             # print(self.next_box_list)
         else:
             # print("entered else clause of _identify_next_big_box")
-            for prev_next_cords in reversed(self.next_box_list[:-1]):
+            for prev_next_cords in reversed(self.next_box_list):
                 if self.big_grid_record[int(prev_next_cords[0]/3), int(prev_next_cords[1]/3)] == 0:
                     self.next_cords = prev_next_cords
+                    self.next_box_list.append(self.next_cords)
                     self.next_b_cords = [(int(prev_next_cords[0]/3*Game.BBOX_SIZE)+Game.START_CORD), (int(prev_next_cords[1]/3*Game.BBOX_SIZE)+Game.START_CORD)] #setting the next box cords to the location of the newly proposed next box
                     # print(self.next_cords)
                     break
@@ -353,6 +377,7 @@ class Game:
             pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big X
             pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
             pygame.draw.ellipse(self.screen, Game.BLACK, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH)
+        pygame.display.update()
 
     def end_aesthetics(self, winning_game_side, game_drawn):
         if winning_game_side == 1:
@@ -365,66 +390,92 @@ class Game:
             congrats = Button(Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[0], Game.BOARD_CENTER-Game.CGRATS_CENTER_DISP[1], Game.CGRATS_CENTER_DISP[0]*2, Game.CGRATS_CENTER_DISP[1]*2, Game.CGRATS_COLOR, Game.CGRATS_FONT, "DRAW!", self.screen)
             congrats.draw_button()
 
-        self.replay_button = Button(Game.BOARD_CENTER-120, Game.BOARD_CENTER+120, 240, 80, Game.GREEN, Game.BUTTON_FONT, "Replay", self.screen)
-        self.replay_button.draw_button()
 
         pygame.display.update()
 
-    def post_game_input(self):
+    # def post_game_input(self):
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.QUIT:
+    #             sys.exit()
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                self.post_game_mouse_pos = pygame.mouse.get_pos()
-                self.post_game_clicked = True
-            else:
-                self.post_game_clicked = False
+    #         if event.type == pygame.MOUSEBUTTONDOWN:
+    #             self.post_game_mouse_pos = pygame.mouse.get_pos()
+    #             self.post_game_clicked = True
+    #         else:
+    #             self.post_game_clicked = False
 
-    def post_game_steps(self, main):
-        if self.post_game_mouse_pos is None:
-            return
+    # def post_game_steps(self):
+    #     if self.post_game_mouse_pos is None:
+    #         return
 
-        if self.replay_button.is_clicked(self.post_game_mouse_pos) and self.post_game_clicked:
-            # print("Replay Clicked")
-            main()
+    #     if self.replay_button.is_clicked(self.post_game_mouse_pos) and self.post_game_clicked:
+    #         # print("Replay Clicked")
+    #         game_loop()
+
+    #     if self.quit_to_title.is_clicked(self.post_game_mouse_pos) and self.post_game_clicked:
 
 
-def main():
-    game_inst = Game(isPlayer1Human, isPlayer2Human)
+def title():
+    title_inst = Title()
+    while True:
+        title_inst.title_aesthetics()
+        title_inst.input()
+        if title_inst.button_logic() is not None:
+            flags = title_inst.button_logic()
+        if title_inst.game_started:
+            return True, flags
+
+
+
+def game_loop(flags):
+    game_inst = Game(*flags)
     game_inst.screen.fill(Game.WHITE)
     game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
     game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
     pygame.display.update()
+    game_inst.init()
     while True:
-        game_inst.init()
         if game_inst.game_moves % 2 == 0:
             game_inst.inform_and_input(game_inst.player1)
             game_inst.update_objects(game_inst.player1)
         elif game_inst.game_moves % 2 == 1:
             game_inst.inform_and_input(game_inst.player2)
             game_inst.update_objects(game_inst.player2)
-        game_inst.game_info_display()
+        if game_inst.quit:
+            return True #preparing to restart the loop of title to game
+        game_inst.side_panel_display()
         if not game_inst.cords or not game_inst.b_cords:
             continue
         game_inst.draw_rects(game_inst.big_grid_record, game_inst.screen, Game.BBOX_SIZE)
         game_inst.draw_shapes(game_inst.game_record, Game.LBOX_SIZE, Game.LXO_LINE_WIDTH, game_inst.screen)
         game_inst.draw_shapes(game_inst.big_grid_record, Game.BBOX_SIZE, Game.BXO_LINE_WIDTH, game_inst.screen)
+        # pygame.display.update()
         if game_inst.game_over:
             game_inst.end(game_inst.winning_game_side)
+
         game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
         game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
-        while (game_inst.game_over):
-        # while True:
+
+        if game_inst.game_over:
             game_inst.end_aesthetics(game_inst.winning_game_side, game_inst.game_drawn)
-            game_inst.post_game_input()
-            game_inst.post_game_steps(main)
+        # while (game_inst.game_over):
+        # # while True:
+        #     game_inst.end_aesthetics(game_inst.winning_game_side, game_inst.game_drawn)
+        #     game_inst.post_game_input()
+        #     game_inst.post_game_steps()
 
         pygame.display.update()
 
 if __name__ == "__main__":
-    main()
+    while True:
+        game_started, flags = title()
+        if game_started:
+            quit = game_loop(flags)
+        if quit:
+            continue
+
+    
 
 
 
