@@ -4,7 +4,7 @@ class Player:
 
 	def __init__(self, side): 
 		self.side = side #equal to 1 (X) or 2 (O)
-		self.clicked = False
+		self.left_clicked = False
 		self.mouse_pos = None
 
 

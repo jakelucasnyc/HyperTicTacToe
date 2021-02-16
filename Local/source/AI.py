@@ -9,7 +9,7 @@ class AI:
 
     def __init__(self, side):
         self.side = side
-        self.clicked = False
+        self.left_clicked = False
         self.mouse_pos = None
         self.AI_turn = False
         self.game_moves = 0

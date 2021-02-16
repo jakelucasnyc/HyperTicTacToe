@@ -5,9 +5,8 @@ from Player import Player
 from AI import AI
 from Button import Button
 from Title import Title
-# from AI import AI
 
-flags = (True, True)
+
 # isPlayer1Human = True
 # isPlayer2Human = True
 
@@ -130,7 +129,7 @@ class Game:
 
 
 
-    def draw_shapes(self, grid_record, size, linewidth, screen):
+    def draw_shapes(self, grid_record, size, linewidth, screen, shape_color):
 
         if not self.next_b_cords or not self.b_cords:
             return
@@ -148,11 +147,11 @@ class Game:
 
 
                 if grid_record[row,col] == 1:
-                    pygame.draw.line(screen, Game.BLACK, [row_cord+Game.X_OFFSET, col_cord+Game.X_OFFSET], [row_cord+size-Game.X_OFFSET, col_cord+size-Game.X_OFFSET], linewidth)
-                    pygame.draw.line(screen, Game.BLACK, [row_cord+Game.X_OFFSET, col_cord+size-Game.X_OFFSET], [row_cord+size-Game.X_OFFSET, col_cord+Game.X_OFFSET], linewidth)
+                    pygame.draw.line(screen, shape_color, [row_cord+Game.X_OFFSET, col_cord+Game.X_OFFSET], [row_cord+size-Game.X_OFFSET, col_cord+size-Game.X_OFFSET], linewidth)
+                    pygame.draw.line(screen, shape_color, [row_cord+Game.X_OFFSET, col_cord+size-Game.X_OFFSET], [row_cord+size-Game.X_OFFSET, col_cord+Game.X_OFFSET], linewidth)
 
                 elif grid_record[row,col] == 2:
-                    pygame.draw.ellipse(screen, Game.BLACK, [row_cord+Game.O_OFFSET, col_cord+Game.O_OFFSET, size-2*Game.O_OFFSET, size-2*Game.O_OFFSET], linewidth)
+                    pygame.draw.ellipse(screen, shape_color, [row_cord+Game.O_OFFSET, col_cord+Game.O_OFFSET, size-2*Game.O_OFFSET, size-2*Game.O_OFFSET], linewidth)
 
         # pygame.display.update()
 
@@ -215,27 +214,27 @@ class Game:
             if event.type == pygame.QUIT:
                 sys.exit()
 
-            if event.type == pygame.MOUSEBUTTONDOWN and isinstance(obj, Player):
+            if event.type == pygame.MOUSEBUTTONDOWN and isinstance(obj, Player) and event.button == LEFT:
                 obj.mouse_pos = obj.get_mouse_pos()
-                obj.clicked = True
+                obj.left_clicked = True
 
-                if self.replay_button.is_clicked(obj.mouse_pos) and obj.clicked:
+                if self.replay_button.is_clicked(obj.mouse_pos) and obj.left_clicked:
                     game_loop(flags)
 
-                if self.quit_to_title.is_clicked(obj.mouse_pos) and obj.clicked:
+                if self.quit_to_title.is_clicked(obj.mouse_pos) and obj.left_clicked:
                     self.quit = True
 
             else:
-                obj.clicked = False
+                obj.left_clicked = False
 
         if isinstance(obj, AI): #sending the AI game info relevant to its moving
             obj.get_game_moves(self.game_moves)
             obj.get_info(self.game_over, self.next_b_cords, self.game_record)
             if obj.AI_turn: #if it's the AI's turn
                 obj.mouse_pos = obj.get_mouse_pos()
-                obj.clicked = True
+                obj.left_clicked = True
             else:
-                obj.clicked = False
+                obj.left_clicked = False
 
     def update_objects(self, obj):
         if obj.mouse_pos is None:
@@ -366,17 +365,17 @@ class Game:
             return 0
 
 
-    def end(self, winning_game_side):
+    def end(self, winning_game_side, shape_color):
         pygame.draw.rect(self.screen, Game.WHITE, [Game.START_CORD, Game.START_CORD, Game.BOARD_SIZE, Game.BOARD_SIZE])
         if self.winning_game_side == 1:
-            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big X
-            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
+            pygame.draw.line(self.screen, shape_color, [Game.START_CORD+Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big X
+            pygame.draw.line(self.screen, shape_color, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
         elif self.winning_game_side == 2:
-            pygame.draw.ellipse(self.screen, Game.BLACK, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big O
+            pygame.draw.ellipse(self.screen, shape_color, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big O
         elif self.game_drawn:
-            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big X
-            pygame.draw.line(self.screen, Game.BLACK, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
-            pygame.draw.ellipse(self.screen, Game.BLACK, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH)
+            pygame.draw.line(self.screen, shape_color, [Game.START_CORD+Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], Game.END_XO_LINE_WIDTH) #drawing big X
+            pygame.draw.line(self.screen, shape_color, [Game.START_CORD+Game.X_OFFSET, Game.END_CORD-Game.X_OFFSET], [Game.END_CORD-Game.X_OFFSET, Game.START_CORD+Game.X_OFFSET], Game.END_XO_LINE_WIDTH)
+            pygame.draw.ellipse(self.screen, shape_color, [Game.START_CORD+Game.O_OFFSET, Game.START_CORD+Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET, Game.BOARD_SIZE-2*Game.O_OFFSET], Game.END_XO_LINE_WIDTH)
         pygame.display.update()
 
     def end_aesthetics(self, winning_game_side, game_drawn):
@@ -393,65 +392,6 @@ class Game:
 
         pygame.display.update()
 
-
-def title():
-    title_inst = Title()
-    while True:
-        title_inst.title_aesthetics()
-        title_inst.input()
-        if title_inst.button_logic() is not None:
-            flags = title_inst.button_logic()
-        if title_inst.game_started:
-            return True, flags
-
-
-
-def game_loop(flags):
-    game_inst = Game(*flags)
-    game_inst.screen.fill(Game.WHITE)
-    game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
-    game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
-    pygame.display.update()
-    game_inst.init()
-    while True:
-        if game_inst.game_moves % 2 == 0:
-            game_inst.inform_and_input(game_inst.player1)
-            game_inst.update_objects(game_inst.player1)
-        elif game_inst.game_moves % 2 == 1:
-            game_inst.inform_and_input(game_inst.player2)
-            game_inst.update_objects(game_inst.player2)
-        if game_inst.quit:
-            return True #preparing to restart the main loop
-        game_inst.side_panel_display()
-        if not game_inst.cords or not game_inst.b_cords:
-            continue
-        game_inst.draw_rects(game_inst.big_grid_record, game_inst.screen, Game.BBOX_SIZE)
-        game_inst.draw_shapes(game_inst.game_record, Game.LBOX_SIZE, Game.LXO_LINE_WIDTH, game_inst.screen)
-        game_inst.draw_shapes(game_inst.big_grid_record, Game.BBOX_SIZE, Game.BXO_LINE_WIDTH, game_inst.screen)
-        # pygame.display.update()
-        if game_inst.game_over:
-            game_inst.end(game_inst.winning_game_side)
-
-        game_inst.draw_grid(Game.LBOX_CORDS, Game.GLINE_WIDTH, game_inst.screen)
-        game_inst.draw_grid(Game.BBOX_CORDS, Game.BGLINE_WIDTH, game_inst.screen)
-
-        if game_inst.game_over:
-            while True:
-                game_inst.end_aesthetics(game_inst.winning_game_side, game_inst.game_drawn)
-                game_inst.inform_and_input(game_inst.player1)
-                game_inst.inform_and_input(game_inst.player2)
-                if game_inst.quit:
-                    return True #preparing to restart the main loop
-
-        pygame.display.update()
-
-if __name__ == "__main__":
-    while True:
-        game_started, flags = title()
-        if game_started:
-            quit = game_loop(flags)
-        if quit:
-            continue
 
     
 

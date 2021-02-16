@@ -28,7 +28,7 @@ class Title:
     def __init__(self):
         self.screen = pygame.display.set_mode((Title.WIDTH, Title.HEIGHT))
         self.clock = pygame.time.Clock()
-        self.clock.tick(60)
+        # self.clock.tick(60)
         self.mouse_pos = (0, 0)
         self.clicked = False
         self.game_started = False
