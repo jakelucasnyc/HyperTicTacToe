@@ -4,26 +4,27 @@ import asyncpg
 from app import app
 import logging
 from sqlalchemy.util import concurrency
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-
-DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/hypertictactoe'
+Base = declarative_base()
+DATABASE_URL = 'postgresql+asyncpg://postgres:postgres@localhost:5432/hypertictactoe'
 
 log = logging.getLogger(__name__)
 
 class DB:
 
 	def __init__(self):
-		self._pool = None
+		self._engine = None
 
 	async def startup(self):
-		self._pool = await asyncpg.create_pool(dsn=DATABASE_URL, min_size=10, max_size=10, max_inactive_connection_lifetime=60)
+		self._engine = create_async_engine(DATABASE_URL, echo=True, echo_pool=True, pool_size=10)
 
 	async def shutdown(self):
-		await self._pool.close()
+		await self._engine.close()
 
-	def getPool(self):
+	def getEngine(self):
 		print(f'returned pool: type {type(self._pool)}')
-		return self._pool
+		return self._engine
 
 db = DB()
 
