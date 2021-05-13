@@ -51,11 +51,29 @@ export default class Canvas extends React.Component {
 
 	componentDidUpdate(prevProps, prevState) {
 
-		//if the user is clicking on the same spot over and over again
-		if (this.state.x === prevState.x & this.state.y === prevState.y) {return}
-			
+	//if the user is clicking on the same spot over and over again
+	if (this.state.x === prevState.x & this.state.y === prevState.y) {return}
+		
+		fetch('/api/game/create', {
+			method: "POST",
+			body: JSON.stringify({
+				side: "X"
+			}),
+			headers: {'Content-Type': 'application/json'}
+
+		})
+			.then(res => {
+
+				console.log('Success')
+				res.json().then(res => console.log(res))
+				
+			})
+			.catch(() => console.log('Failure'))
+
 		console.log(`${this.state.x}, ${this.state.y}`)
 		console.log(`${prevState.x}, ${prevState.y}`)
+
+
 
 
 	}

@@ -1,5 +1,6 @@
 from app import app
+import uvicorn
 
 
 if __name__ == '__main__':
-	app.run(threaded=True, debug=True)
+	uvicorn.run(app, debug=True)
