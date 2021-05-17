@@ -17,6 +17,12 @@ export default function Game() {
 	const [gameData, updateGameData] = useState(initialGameData)
 	const [mousePos, updateMousePos] = useState([0, 0])
 
+	const source = new EventSource('/api/stream/game/20/events');
+	source.onmessage = event => {
+		console.log('Received Data')
+		console.log(event.data)
+	}
+
 	// useEffect(() => {
 	// 	console.log(mousePos);
 
